@@ -1,12 +1,14 @@
 /**
  * 
  */
-package com.yede.security.browser.validate.code.image;
+package com.yede.security.core.validate.code.image;
+
+
+
+import com.yede.security.core.validate.code.ValidateCode;
 
 import java.awt.image.BufferedImage;
-import java.time.LocalDateTime;
-
-import com.imooc.security.core.validate.code.ValidateCode;
+import java.util.Date;
 
 
 /**
@@ -22,7 +24,7 @@ public class ImageCode extends ValidateCode {
 		this.image = image;
 	}
 	
-	public ImageCode(BufferedImage image, String code, LocalDateTime expireTime){
+	public ImageCode(BufferedImage image, String code, Date expireTime){
 		super(code, expireTime);
 		this.image = image;
 	}

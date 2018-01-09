@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.yede.security.browser.validate.code;
+package com.yede.security.core.validate.code;
 
 
 import java.util.Date;
