@@ -5,17 +5,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Created by yede on 2018/1/10.
+ */
 @RestController
-@RequestMapping(value = "/test")
-public class TestController {
-
-    @GetMapping("/{testId}")
-    public String test(@PathVariable Long testId) {
-        return "testId"+testId;
+@RequestMapping("/user")
+public class UserController {
+    @GetMapping("/{userId}")
+    public String test(@PathVariable Long userId) {
+        return "用户"+userId;
     }
 
     @GetMapping("")
     public String test2() {
-        return "测试所有的测试";
+        return "全部用户";
     }
 }
