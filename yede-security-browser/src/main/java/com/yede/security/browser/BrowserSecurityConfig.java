@@ -1,41 +1,77 @@
 package com.yede.security.browser;
 
-import com.yede.security.browser.authentication.SecurityAuthenticationFailureHandler;
-import com.yede.security.browser.authentication.SecurityAuthenticationSuccessHandler;
+import com.yede.security.core.authentication.AbstractChannelSecurityConfig;
+import com.yede.security.core.authentication.mobile.SmsCodeAuthenticationSecurityConfig;
+import com.yede.security.core.properties.SecurityConstants;
 import com.yede.security.core.properties.SecurityProperties;
-import com.yede.security.core.validate.code.ValidateCodeFilter;
+import com.yede.security.core.validate.code.ValidateCodeSecurityConfig;
 import org.apache.tomcat.jdbc.pool.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 
 
 @Configuration
-public class BrowserSecurityConfig extends WebSecurityConfigurerAdapter {
+public class BrowserSecurityConfig extends AbstractChannelSecurityConfig {
     @Autowired
     private SecurityProperties securityProperties;
-
-    @Autowired
-    private SecurityAuthenticationSuccessHandler securityAuthenticationSuccessHandler;
-    @Autowired
-    private SecurityAuthenticationFailureHandler securityAuthenticationFailureHandler;
 
     @Autowired
     private DataSource dataSource;
 
     @Autowired
-    private UserDetailsService myUserDetailsService;
+    private UserDetailsService userDetailsService;
 
     @Autowired
-    private ValidateCodeFilter validateCodeFilter;
+    private SmsCodeAuthenticationSecurityConfig smsCodeAuthenticationSecurityConfig;
+
+    @Autowired
+    private ValidateCodeSecurityConfig validateCodeSecurityConfig;
+
+
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+
+        applyPasswordAuthenticationConfig(http);
+
+        http.apply(validateCodeSecurityConfig)
+                .and()
+                .apply(smsCodeAuthenticationSecurityConfig)
+                .and()
+                .rememberMe()
+                .tokenRepository(persistentTokenRepository())
+                .tokenValiditySeconds(securityProperties.getBrowser().getRememberMeSeconds())
+                .userDetailsService(userDetailsService)
+                .and()
+                .sessionManagement()
+                .maximumSessions(securityProperties.getBrowser().getSession().getMaximumSessions())
+                .maxSessionsPreventsLogin(securityProperties.getBrowser().getSession().isMaxSessionsPreventsLogin())
+                .and()
+                .and()
+                .authorizeRequests()
+                .antMatchers(
+                        SecurityConstants.DEFAULT_UNAUTHENTICATION_URL,
+                        SecurityConstants.DEFAULT_LOGIN_PROCESSING_URL_MOBILE,
+                        securityProperties.getBrowser().getLoginPage(),
+                        SecurityConstants.DEFAULT_VALIDATE_CODE_URL_PREFIX + "/*",
+                        securityProperties.getBrowser().getSignUpUrl(),
+                        securityProperties.getBrowser().getSession().getSessionInvalidUrl() + ".json",
+                        securityProperties.getBrowser().getSession().getSessionInvalidUrl() + ".html",
+                        "/user/regist")
+                .permitAll()
+                .anyRequest()
+                .authenticated()
+                .and()
+                .csrf().disable();
+
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -44,25 +80,9 @@ public class BrowserSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Bean
     public PersistentTokenRepository persistentTokenRepository() {
-        JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
-        jdbcTokenRepository.setDataSource(dataSource);
-        jdbcTokenRepository.setCreateTableOnStartup(false);
-        return jdbcTokenRepository;
-    }
-
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-
-
-        http.addFilterBefore(validateCodeFilter, UsernamePasswordAuthenticationFilter.class)
-                .formLogin().loginPage("/authentication/require").loginProcessingUrl("/authentication/form")
-                .successHandler(securityAuthenticationSuccessHandler).failureHandler(securityAuthenticationFailureHandler)
-                .and().rememberMe().tokenRepository(persistentTokenRepository())
-                .tokenValiditySeconds(securityProperties.getBrowser().getRememberMeSeconds())
-                .userDetailsService(myUserDetailsService).and()
-                .authorizeRequests().antMatchers("/authentication/require", securityProperties.getBrowser().getLoginPage(), "/imageCode", "/smsCode").permitAll()
-                .anyRequest()
-                .authenticated().and().csrf().disable();
-
+        JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
+        tokenRepository.setDataSource(dataSource);
+//		tokenRepository.setCreateTableOnStartup(true);
+        return tokenRepository;
     }
 }
